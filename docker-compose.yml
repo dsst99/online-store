@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-onlinestore}
+      POSTGRES_USER: ${POSTGRES_USER:-onlinestore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-onlinestore}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-onlinestore} -d ${POSTGRES_DB:-onlinestore}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  memcached:
+    image: memcached:1.6-alpine
+    command: ["-m", "128", "-I", "2m"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "echo stats | nc 127.0.0.1 11211 | grep -q version"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    build: .
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      memcached:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app  # hot-reload в dev
+      - media_data:/app/media
+    command: >
+      bash -lc "
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+
+  worker:
+    build: .
+    env_file: .env
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_started
+    command: >
+      bash -lc "
+      celery -A online_store worker -l info
+      "
+    volumes:
+      - .:/app
+      - media_data:/app/media
+
+volumes:
+  db_data:
+  media_data:
