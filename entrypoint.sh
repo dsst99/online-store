@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e  # Прерывать выполнение при любой ошибке
 
-echo "🚀 Starting entrypoint..."
+echo "Starting entrypoint..."
 
 # --- Ждем Postgres ---
-echo "⏳ Waiting for Postgres..."
+echo "Waiting for Postgres..."
 until python - <<EOF
 import psycopg2
 import sys
@@ -22,32 +22,32 @@ do
     echo "Waiting for Postgres..."
     sleep 2
 done
-echo "✅ Postgres is ready"
+echo "Postgres is ready"
 
 # --- Ждем Redis ---
-echo "⏳ Waiting for Redis..."
+echo "Waiting for Redis..."
 until redis-cli -h redis ping | grep PONG; do
     echo "Waiting for Redis..."
     sleep 2
 done
-echo "✅ Redis is ready"
+echo "Redis is ready"
 
 # --- Ждем Memcached ---
-echo "⏳ Waiting for Memcached..."
+echo "Waiting for Memcached..."
 until echo "stats" | nc -w 1 memcached 11211 | grep -q "version"; do
     echo "Waiting for Memcached..."
     sleep 2
 done
-echo "✅ Memcached is ready"
+echo "Memcached is ready"
 
 # --- Создаём миграции для всех приложений ---
-echo "📦 Creating migrations for all apps..."
+echo "Creating migrations for all apps..."
 python manage.py makemigrations --noinput || echo "No new migrations to create"
 
 # --- Применяем все миграции ---
-echo "📦 Applying migrations..."
+echo "Applying migrations..."
 python manage.py migrate --noinput
 
 # --- Запускаем сервер ---
-echo "🚀 Starting Django server..."
+echo "Starting Django server..."
 exec python manage.py runserver 0.0.0.0:8000

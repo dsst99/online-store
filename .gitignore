@@ -9,6 +9,9 @@ __pycache__/
 # Django
 db.sqlite3
 
+*/migrations/
+!*/migrations/__init__.py
+
 # IDE (PyCharm)
 .idea/
 
@@ -17,3 +20,13 @@ db.sqlite3
 
 # Redis dump
 dump.rdb
+
+# pytest
+.pytest_cache/
+
+# coverage
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
